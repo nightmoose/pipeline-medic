@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pipeline Medic — Incident Summary</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: #121b2e;
+    --border: #22304a;
+    --text: #e6edf7;
+    --muted: #8b9bb4;
+    --blue: #4da3ff;
+    --green: #35d08f;
+    --amber: #e0a64c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  h1 { color: var(--blue); margin: 0 0 4px; font-size: 28px; }
+  .subtitle { color: var(--muted); margin: 0 0 28px; }
+  .kpis { display: flex; gap: 16px; margin-bottom: 28px; }
+  .kpi {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 24px;
+    min-width: 140px;
+  }
+  .kpi .value { font-size: 28px; font-weight: 700; }
+  .kpi .label { color: var(--muted); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+  }
+  .pill.verified { background: rgba(53, 208, 143, 0.15); color: var(--green); }
+  .pill.suggested { background: rgba(224, 166, 76, 0.15); color: var(--amber); }
+  .pill.failed { background: rgba(224, 76, 76, 0.15); color: #e04c4c; }
+</style>
+</head>
+<body>
+  <h1>Pipeline Medic — Incident Summary</h1>
+  <p class="subtitle">{{ subtitle }}</p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="value">{{ kpis.diagnosed }}</div><div class="label">diagnosed</div></div>
+    <div class="kpi"><div class="value">{{ kpis.verified }}</div><div class="label">verified in sandbox</div></div>
+    <div class="kpi"><div class="value">{{ kpis.prs_proposed }}</div><div class="label">PRs proposed</div></div>
+    <div class="kpi"><div class="value">{{ kpis.median_diagnose }}</div><div class="label">median diagnose</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>#</th><th>Job</th><th>Failure</th><th>Root cause</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for incident in incidents %}
+      <tr>
+        <td>{{ incident.number }}</td>
+        <td>{{ incident.job }}</td>
+        <td>{{ incident.failure }}</td>
+        <td>{{ incident.root_cause }}</td>
+        <td><span class="pill {{ incident.status_kind }}">{{ incident.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
