@@ -8,16 +8,14 @@ from airflow.models.dag import DAG
 from airflow.operators.python import PythonOperator
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PROJECT_DIR = str(REPO_ROOT / "dbt_project")
+PROJECT_DIR = os.environ.get("PIPELINE_MEDIC_PROJECT_DIR", str(REPO_ROOT / "dbt_project"))
 PROFILES_DIR = PROJECT_DIR
 
 
 def _run_dbt(args: list[str]) -> None:
     from dbt.cli.main import dbtRunner
 
-    os.environ.setdefault(
-        "DBT_DUCKDB_PATH", str(REPO_ROOT / "dbt_project" / "dev.duckdb")
-    )
+    os.environ.setdefault("DBT_DUCKDB_PATH", str(Path(PROJECT_DIR) / "dev.duckdb"))
     result = dbtRunner().invoke(
         [*args, "--project-dir", PROJECT_DIR, "--profiles-dir", PROFILES_DIR]
     )

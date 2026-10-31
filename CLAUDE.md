@@ -1,14 +1,13 @@
 # CLAUDE.md: Pipeline Medic
 Hackathon project for the Meta Global AI Developer Hackathon (Oct 27 to Nov 4, 2026). All code is new, and nothing from before Oct 27 may be copied in.
-Goal: an agent that diagnoses failing **dbt** jobs orchestrated by **Airflow**, writes a fix, verifies it with `dbt build` in a sandbox, then proposes a PR.
+Goal: an agent that diagnoses failing **dbt** jobs orchestrated by **Airflow**, writes a fix, verifies it with `dbt build` in a sandbox, then proposes a PR. Model: Muse Spark via the Meta Model API only.
 
 ## Hard rules
 - The repo licence is MIT. Allowed dependency licences: MIT, ISC, BSD-2/3, 0BSD, Apache-2.0. Ask before adding anything GPL, LGPL, AGPL, MPL or unknown. Run `pip-licenses` after adding a dependency.
 - Stack: Python 3.11, uv, dbt-core plus dbt-duckdb, apache-airflow (pinned, SQLite metadata, run via `airflow dags test`), sqlglot, openai SDK, typer, rich, jinja2, pydantic, pytest.
-- LLM calls go only through `pipeline_medic/llm.py`, using the OpenAI-compatible client.
-  - Primary: Muse Spark via the Meta Model API (`META_API_KEY`, `META_BASE_URL`, `MODEL=muse-spark`).
-  - Fallback: Muse Spark Open on Baseten (`BASETEN_API_KEY`, model `meta-models/muse-spark-open-1026`).
-  - Never loop paid calls. Cache responses in `.cache/llm/`, keyed by prompt hash. Tests use recorded fixtures.
+- LLM calls go only through `pipeline_medic/llm.py`, using the openai SDK against the Meta Model API: `base_url=https://api.meta.ai/v1`, `api_key=os.environ["MODEL_API_KEY"]` (pass it explicitly), model `muse-spark-1.3` (override with `MODEL`). No other providers and no fallback model.
+  - Muse Spark always reasons, so never send `reasoning_effort: "none"`. Use `response_format` for structured JSON.
+  - Never loop paid calls. Cache responses in `.cache/llm/`, keyed by prompt hash. Offline tests use recorded or mock response fixtures (`tests/fixtures/llm/`) and must not need a key.
 - The PR step defaults to `--dry-run`. Never push or open a PR unless asked.
 - Never commit secrets. `.env` is gitignored.
 - Keep it small: under 2,000 lines of our own code.

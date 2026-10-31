@@ -1,0 +1,10 @@
+{
+  "root_cause": "A duplicate customer_id row in the customers seed causes the join in order_customer_detail to fan out, duplicating rows for that customer's orders.",
+  "evidence": [
+    "unique_test:order_id got 2 duplicate results on order_customer_detail",
+    "stg_customers has two rows for customer_id=1"
+  ],
+  "confidence": 0.9,
+  "patch": "--- a/dbt_project/models/marts/order_customer_detail.sql\n+++ b/dbt_project/models/marts/order_customer_detail.sql\n@@ -1,3 +1,8 @@\n+with deduped_customers as (\n+    select *\n+    from {{ ref('stg_customers') }}\n+    qualify row_number() over (partition by customer_id order by customer_id) = 1\n+)\n+\n select\n     o.order_id,\n     o.customer_id,\n@@ -7,4 +12,4 @@ select\n     c.full_name,\n     c.region\n from {{ ref('fct_orders') }} o\n-left join {{ ref('stg_customers') }} c on c.customer_id = o.customer_id\n+left join deduped_customers c on c.customer_id = o.customer_id\n",
+  "action": "fix"
+}
