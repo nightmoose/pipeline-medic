@@ -16,6 +16,7 @@ out/
 logs/
 target/
 dbt_packages/
+.user.yml
 *.duckdb
 *.duckdb.wal
 .DS_Store

@@ -1,0 +1,11 @@
+order_id,customer_id,order_date,amount,status
+5001,1,2024-05-01,120,completed
+5002,2,2024-05-02,45,completed
+5003,1,2024-05-05,75,completed
+5004,3,2024-05-06,200,completed
+5005,4,2024-05-07,30,cancelled
+5006,5,2024-05-09,60,completed
+5007,6,2024-05-10,150,completed
+5008,7,2024-05-12,90,completed
+5009,8,2024-05-13,110,completed
+5010,2,2024-05-15,25,completed

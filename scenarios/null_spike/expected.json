@@ -1,0 +1,9 @@
+{
+  "scenario": "null_spike",
+  "failing_task": "dbt_build_staging",
+  "failing_model": "stg_customers",
+  "failing_check": "not_null_test:email",
+  "action": "suggest",
+  "root_cause": "The upstream customers feed is sending null emails for some customers; this is a data quality issue, not a code defect.",
+  "expected_patch_touches": []
+}

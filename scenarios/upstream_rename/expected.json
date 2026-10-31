@@ -1,0 +1,9 @@
+{
+  "scenario": "upstream_rename",
+  "failing_task": "dbt_build_staging",
+  "failing_model": "stg_orders",
+  "failing_check": "compilation_error",
+  "action": "fix",
+  "root_cause": "The orders seed renamed customer_id to cust_id, so stg_orders.sql selects a column that no longer exists.",
+  "expected_patch_touches": ["dbt_project/models/staging/stg_orders.sql"]
+}
