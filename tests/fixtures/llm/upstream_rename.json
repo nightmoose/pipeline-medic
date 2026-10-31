@@ -1,0 +1,10 @@
+{
+  "root_cause": "The orders seed renamed customer_id to cust_id, so stg_orders.sql selects a column that no longer exists.",
+  "evidence": [
+    "DuckDB binder error: Referenced column \"customer_id\" not found in FROM clause!",
+    "Candidate bindings: \"cust_id\", \"order_id\", \"order_date\", \"amount\""
+  ],
+  "confidence": 0.95,
+  "patch": "--- a/dbt_project/models/staging/stg_orders.sql\n+++ b/dbt_project/models/staging/stg_orders.sql\n@@ -1,6 +1,6 @@\n select\n     order_id,\n-    customer_id,\n+    cust_id as customer_id,\n     cast(order_date as date) as order_date,\n     amount,\n     status\n from {{ ref('orders') }}\n",
+  "action": "fix"
+}

@@ -1,0 +1,10 @@
+{
+  "root_cause": "orders.amount now contains non-numeric text, so the seed loads it as VARCHAR which violates the INTEGER contract on fct_orders.amount.",
+  "evidence": [
+    "contract_enforcement error: column amount is VARCHAR but the contract requires INTEGER",
+    "stg_orders.sql passes amount through unchanged from the orders seed"
+  ],
+  "confidence": 0.85,
+  "patch": "--- a/dbt_project/models/staging/stg_orders.sql\n+++ b/dbt_project/models/staging/stg_orders.sql\n@@ -1,6 +1,6 @@\n select\n     order_id,\n     customer_id,\n     cast(order_date as date) as order_date,\n-    amount,\n+    cast(regexp_replace(amount, '[^0-9]', '', 'g') as integer) as amount,\n     status\n from {{ ref('orders') }}\n",
+  "action": "fix"
+}

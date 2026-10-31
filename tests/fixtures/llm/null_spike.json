@@ -1,0 +1,10 @@
+{
+  "root_cause": "The upstream customers feed is sending null emails for some customers; this is a data quality issue, not a code defect.",
+  "evidence": [
+    "not_null_test:email failed with 2 null rows on stg_customers",
+    "stg_customers.sql passes email through unchanged from the customers seed"
+  ],
+  "confidence": 0.8,
+  "patch": "",
+  "action": "suggest"
+}
