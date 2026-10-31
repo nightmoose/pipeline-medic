@@ -29,4 +29,4 @@ templates/summary.html.j2   tests/
 4. null_spike: the upstream feed sends null emails, so a `not_null` test fails. Suggest only: this is a data problem, not a code problem.
 
 ## Done
-`pipeline-medic run --all` triggers the Airflow DAG and catches the failed task. Across the four scenarios it shows 4 diagnoses, 3 patches verified by `dbt build --select <model>+` in a sandbox copy, 1 suggestion, and writes the HTML summary.
+`pipeline-medic run --all` triggers the Airflow DAG and catches the failed task. Across the four scenarios it shows 4 diagnoses, 3 patches verified by a full `dbt build` in a sandbox copy, 1 suggestion, and writes the HTML summary.

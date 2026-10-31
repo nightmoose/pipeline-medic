@@ -10,12 +10,14 @@ import importlib.util
 import json
 import shutil
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 import typer
 
 from pipeline_medic import collector, llm
-from pipeline_medic.airflow_hook import find_failed_task, run_dag
+from pipeline_medic.airflow_hook import FailedTask, find_failed_task, run_dag
+from pipeline_medic.collector import FailureContext
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DBT_PROJECT = REPO_ROOT / "dbt_project"
@@ -44,9 +46,18 @@ def build_sandbox(scenario: str, sandbox_dir: Path) -> Path:
     return project_dir
 
 
-def diagnose_scenario(scenario: str, *, mock: bool = True) -> llm.Diagnosis:
+@dataclass
+class DiagnoseResult:
+    scenario: str
+    failed_task: FailedTask
+    context: FailureContext
+    diagnosis: llm.Diagnosis
+
+
+def diagnose_scenario_full(scenario: str, *, mock: bool = True) -> DiagnoseResult:
     """Run `scenario` against a sandbox copy of the dbt project via the real
-    Airflow DAG, collect the failure context, and return a Diagnosis."""
+    Airflow DAG, collect the failure context, and return the failed task, the
+    failure context, and a Diagnosis."""
     with tempfile.TemporaryDirectory() as tmp:
         sandbox_dir = Path(tmp)
         project_dir = build_sandbox(scenario, sandbox_dir)
@@ -63,7 +74,16 @@ def diagnose_scenario(scenario: str, *, mock: bool = True) -> llm.Diagnosis:
         mock_response = None
         if mock:
             mock_response = json.loads((FIXTURES_DIR / f"{scenario}.json").read_text())
-        return llm.diagnose(prompt, mock_response=mock_response)
+        diagnosis = llm.diagnose(prompt, mock_response=mock_response)
+        return DiagnoseResult(
+            scenario=scenario, failed_task=failed_task, context=context, diagnosis=diagnosis
+        )
+
+
+def diagnose_scenario(scenario: str, *, mock: bool = True) -> llm.Diagnosis:
+    """Run `scenario` and return just the Diagnosis. See `diagnose_scenario_full`
+    for the failed task and failure context too."""
+    return diagnose_scenario_full(scenario, mock=mock).diagnosis
 
 
 @app.command()

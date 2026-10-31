@@ -18,6 +18,9 @@ dependencies = [
     "pydantic>=2,<3",
 ]
 
+[project.scripts]
+pipeline-medic = "pipeline_medic.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8,<9",
