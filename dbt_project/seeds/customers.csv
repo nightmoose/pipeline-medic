@@ -1,0 +1,9 @@
+customer_id,email,full_name,region,signup_date
+1,alice@example.com,Alice Anderson,NA,2024-01-05
+2,bob@example.com,Bob Brown,EU,2024-01-10
+3,carol@example.com,Carol Clark,NA,2024-02-01
+4,dave@example.com,Dave Davis,APAC,2024-02-15
+5,erin@example.com,Erin Evans,EU,2024-03-01
+6,frank@example.com,Frank Foster,NA,2024-03-10
+7,grace@example.com,Grace Green,APAC,2024-04-01
+8,heidi@example.com,Heidi Hill,EU,2024-04-20

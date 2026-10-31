@@ -1,0 +1,9 @@
+user_id,customer_id,username,created_at
+101,1,alice_a,2024-01-05
+102,2,bob_b,2024-01-10
+103,3,carol_c,2024-02-01
+104,4,dave_d,2024-02-15
+105,5,erin_e,2024-03-01
+106,6,frank_f,2024-03-10
+107,7,grace_g,2024-04-01
+108,8,heidi_h,2024-04-20

@@ -1,0 +1,9 @@
+{
+  "scenario": "schema_drift",
+  "failing_task": "dbt_build_marts",
+  "failing_model": "fct_orders",
+  "failing_check": "contract_enforcement",
+  "action": "fix",
+  "root_cause": "orders.amount now contains non-numeric text, so the seed loads it as VARCHAR which violates the INTEGER contract on fct_orders.amount.",
+  "expected_patch_touches": ["dbt_project/models/staging/stg_orders.sql"]
+}

@@ -1,0 +1,9 @@
+{
+  "scenario": "bad_join_fanout",
+  "failing_task": "dbt_build_marts",
+  "failing_model": "order_customer_detail",
+  "failing_check": "unique_test:order_id",
+  "action": "fix",
+  "root_cause": "A duplicate customer_id row in the customers seed causes the join in order_customer_detail to fan out, duplicating rows for that customer's orders.",
+  "expected_patch_touches": ["dbt_project/models/marts/order_customer_detail.sql"]
+}
