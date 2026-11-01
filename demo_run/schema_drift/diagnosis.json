@@ -1,0 +1,11 @@
+{
+  "root_cause": "stg_orders.amount is loaded as VARCHAR currency string (e.g. '120 USD') and fct_orders passes it through unmodified, violating the enforced contract requiring amount INTEGER.",
+  "evidence": [
+    "contract expects amount INTEGER but definition provides VARCHAR",
+    "stg_orders.amount is VARCHAR with values like '120 USD'",
+    "fct_orders selects amount directly with no cast/conversion"
+  ],
+  "confidence": 0.95,
+  "patch": "--- a/models/marts/fct_orders.sql\n+++ b/models/marts/fct_orders.sql\n@@ -6,7 +6,7 @@\n select\n     order_id,\n     customer_id,\n     order_date,\n-    amount,\n+    CAST(SPLIT_PART(amount, ' ', 1) AS INTEGER) AS amount,\n     status\n from {{ ref('stg_orders') }}",
+  "action": "fix"
+}

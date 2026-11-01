@@ -11,6 +11,7 @@ verify the exact commands without touching the network or this repo.
 from __future__ import annotations
 
 import subprocess
+import re
 import tempfile
 from pathlib import Path
 from typing import Literal
@@ -83,15 +84,21 @@ def prepare_pr(
     git("checkout", "-b", branch)
 
     patch_file = Path(tempfile.mkstemp(suffix=".patch")[1])
-    patch_file.write_text(diagnosis.patch)
+    patch_file.write_text(normalize_patch_paths(diagnosis.patch))
     try:
-        apply_argv = ["git", "apply", "-p1", str(patch_file)]
+        apply_argv = ["git", "apply", "-p1", "--recount", str(patch_file)]
         commands.append(apply_argv)
-        run(apply_argv, cwd=repo_root, check=True, capture_output=True, text=True)
+        try:
+            run(apply_argv, cwd=repo_root, check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError:
+            # LLM diffs can have off-by-N hunk headers; fall back to content-matching apply.
+            from pipeline_medic.verify import apply_patch
+
+            apply_patch(Path(repo_root), diagnosis.patch)
     finally:
         patch_file.unlink(missing_ok=True)
 
-    touched = parse_patch_targets(diagnosis.patch)
+    touched = parse_patch_targets(normalize_patch_paths(diagnosis.patch))
     git("add", *touched)
     git("commit", "-m", f"pipeline-medic: fix {scenario}\n\n{diagnosis.root_cause}")
 
@@ -120,3 +127,13 @@ def prepare_pr(
         body=body,
         commands=commands,
     )
+
+
+def normalize_patch_paths(patch_text: str) -> str:
+    """Make dbt-project-relative diff paths (models/...) repo-relative (dbt_project/models/...)."""
+    out = []
+    for line in patch_text.splitlines(keepends=True):
+        if line.startswith(("diff --git ", "--- ", "+++ ")):
+            line = re.sub(r"(^|\s)([ab])/models/", r"\1\2/dbt_project/models/", line)
+        out.append(line)
+    return "".join(out)

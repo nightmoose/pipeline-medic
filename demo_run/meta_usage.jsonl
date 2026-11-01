@@ -1,0 +1,10 @@
+{"ts": "2026-10-31T23:56:59.350858+00:00", "scenario": "upstream_rename", "model": "muse-spark-1.3", "prompt_tokens": 439, "completion_tokens": 1758, "est_cost_usd": 0.00802, "reasoning_tokens": 1500}
+{"ts": "2026-10-31T23:58:30.418171+00:00", "scenario": "schema_drift", "model": "muse-spark-1.3", "prompt_tokens": 643, "completion_tokens": 1388, "est_cost_usd": 0.006703, "reasoning_tokens": 1213}
+{"ts": "2026-10-31T23:59:27.000570+00:00", "scenario": "bad_join_fanout", "model": "muse-spark-1.3", "prompt_tokens": 477, "completion_tokens": 2082, "est_cost_usd": 0.009445, "reasoning_tokens": 1768}
+{"ts": "2026-10-31T23:59:43.068017+00:00", "scenario": "null_spike", "model": "muse-spark-1.3", "prompt_tokens": 421, "completion_tokens": 1550, "est_cost_usd": 0.007114, "reasoning_tokens": 1402}
+{"ts": "2026-11-01T00:00:32.572105+00:00", "scenario": "upstream_rename:retry", "model": "muse-spark-1.3", "prompt_tokens": 628, "completion_tokens": 3066, "est_cost_usd": 0.013816, "reasoning_tokens": 2789}
+{"ts": "2026-11-01T00:01:03.848137+00:00", "scenario": "schema_drift:retry", "model": "muse-spark-1.3", "prompt_tokens": 762, "completion_tokens": 4019, "est_cost_usd": 0.018033, "reasoning_tokens": 3786}
+{"ts": "2026-11-01T00:04:09.429061+00:00", "scenario": "upstream_rename", "model": "muse-spark-1.3", "prompt_tokens": 551, "completion_tokens": 1654, "est_cost_usd": 0.007718, "reasoning_tokens": 1449}
+{"ts": "2026-11-01T00:04:27.188796+00:00", "scenario": "schema_drift", "model": "muse-spark-1.3", "prompt_tokens": 760, "completion_tokens": 1517, "est_cost_usd": 0.007397, "reasoning_tokens": 1320}
+{"ts": "2026-11-01T00:05:03.557429+00:00", "scenario": "bad_join_fanout", "model": "muse-spark-1.3", "prompt_tokens": 714, "completion_tokens": 5963, "est_cost_usd": 0.026235, "reasoning_tokens": 5602}
+{"ts": "2026-11-01T00:05:21.127721+00:00", "scenario": "null_spike", "model": "muse-spark-1.3", "prompt_tokens": 541, "completion_tokens": 2106, "est_cost_usd": 0.009627, "reasoning_tokens": 1960}

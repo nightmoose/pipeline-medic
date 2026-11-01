@@ -56,6 +56,21 @@ All LLM calls go through `pipeline_medic/llm.py` and nowhere else, using the `op
 
 Responses are cached by prompt hash under `.cache/llm/` so repeat runs don't re-spend a paid call. No other provider and no fallback model are used.
 
+### Live run
+
+Dropping `--mock` calls Muse Spark for real, guarded by a few safety nets in `pipeline_medic/llm.py`:
+
+- the API client uses `max_retries=0` and a 120s timeout — no silent retries against a paid endpoint;
+- a hard cap, `MAX_LLM_CALLS` (default 20), tracked in `.cache/llm/calls.json`, refuses further calls once reached (every real attempt counts, including the invalid-JSON retry);
+- every real call appends a cost estimate to `.cache/llm/usage.jsonl` (tokens in/out, $1.25/M input + $4.25/M output), with no key, headers, or prompts logged.
+
+```sh
+export MODEL_API_KEY=...
+uv run pipeline-medic run --all --save-artifacts out/live
+```
+
+`--save-artifacts DIR` writes each scenario's rich report, `diagnosis.json`, and verify log under `DIR/<scenario>/`, plus a copy of `summary.html`, with the API key and any `Bearer ...` token scrubbed from every file.
+
 ## Tests
 
 ```sh

@@ -6,6 +6,9 @@
 
 from __future__ import annotations
 
+import os
+import re
+import shutil
 import subprocess
 import tempfile
 import time
@@ -16,15 +19,27 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
 
-from pipeline_medic import diagnose, pr, verify
+from pipeline_medic import llm, diagnose, pr, verify
 from pipeline_medic.report import Incident, write_summary
 
 SCENARIOS = ["upstream_rename", "schema_drift", "bad_join_fanout", "null_spike"]
 REPO_ROOT = diagnose.REPO_ROOT
 PR_BODIES_DIR = REPO_ROOT / "out" / "pr"
+BEARER_RE = re.compile(r"Bearer \S+")
 
 app = typer.Typer(add_completion=False)
-console = Console()
+console = Console(record=True)
+
+
+def _scrub(text: str) -> str:
+    api_key = os.environ.get("MODEL_API_KEY")
+    if api_key:
+        text = text.replace(api_key, "[REDACTED]")
+    return BEARER_RE.sub("Bearer [REDACTED]", text)
+
+
+def _write_artifact(path: Path, text: str) -> None:
+    path.write_text(_scrub(text))
 
 
 @app.callback()
@@ -61,7 +76,9 @@ def _propose_pr(scenario: str, diagnosis, verify_result: verify.VerifyResult) ->
         return result, body_path
 
 
-def run_incident(scenario: str, *, mock: bool, number: int) -> tuple[Incident, float]:
+def run_incident(
+    scenario: str, *, mock: bool, number: int, save_artifacts: Path | None = None
+) -> tuple[Incident, float]:
     start = time.perf_counter()
     result = diagnose.diagnose_scenario_full(scenario, mock=mock)
     elapsed = time.perf_counter() - start
@@ -94,6 +111,19 @@ def run_incident(scenario: str, *, mock: bool, number: int) -> tuple[Incident, f
     console.print(Panel(fix_body, title="[bold blue]PROPOSED FIX[/bold blue]", title_align="left"))
 
     verify_result = verify.verify_scenario(scenario, diagnosis)
+    if not mock and diagnosis.action == "fix" and not verify_result.passed and result.prompt:
+        # One self-correction pass: feed the sandbox failure back to the model.
+        console.print("[yellow]Sandbox rejected the fix; retrying once with verification feedback[/yellow]")
+        retry_prompt = (
+            f"{result.prompt}\n\nYour previous patch:\n{diagnosis.patch}\n\n"
+            f"It FAILED sandbox verification (dbt build log tail):\n{verify_result.log[-2000:]}\n"
+            "Return a corrected diagnosis and patch."
+        )
+        diagnosis = llm.diagnose(retry_prompt, scenario=f"{scenario}:retry")
+        if diagnosis.action == "fix":
+            console.print(Panel(Syntax(diagnosis.patch, "diff", theme="ansi_dark", word_wrap=True),
+                                title="[bold blue]PROPOSED FIX (retry)[/bold blue]", title_align="left"))
+        verify_result = verify.verify_scenario(scenario, diagnosis)
     if diagnosis.action == "suggest":
         verify_lines = [_check_line(True, "no patch to verify — flagged as an upstream data issue")]
     else:
@@ -122,6 +152,14 @@ def run_incident(scenario: str, *, mock: bool, number: int) -> tuple[Incident, f
     console.print(Panel("\n".join(pr_lines), title="[bold blue]PULL REQUEST[/bold blue]", title_align="left"))
     console.print()
 
+    report_text = console.export_text(clear=True)
+    if save_artifacts is not None:
+        scenario_dir = save_artifacts / scenario
+        scenario_dir.mkdir(parents=True, exist_ok=True)
+        _write_artifact(scenario_dir / "report.txt", report_text)
+        _write_artifact(scenario_dir / "diagnosis.json", diagnosis.model_dump_json(indent=2))
+        _write_artifact(scenario_dir / "verify.log", verify_result.log)
+
     failure_headline = context.message.strip().splitlines()[0] if context.message else context.check
     incident = Incident(
         number=number,
@@ -141,21 +179,31 @@ def run(
     mock: bool = typer.Option(
         False, "--mock", help="Use recorded fixtures instead of calling the Meta Model API"
     ),
+    save_artifacts: Path = typer.Option(
+        None,
+        "--save-artifacts",
+        help="Directory to write per-scenario report.txt, diagnosis.json, verify.log, "
+        "and a copy of summary.html",
+    ),
 ) -> None:
     if bool(scenario) == all_:
         raise typer.BadParameter("pass exactly one of --scenario <name> or --all")
 
     scenarios = SCENARIOS if all_ else [scenario]
+    if save_artifacts is not None:
+        save_artifacts.mkdir(parents=True, exist_ok=True)
 
     incidents: list[Incident] = []
     diagnose_seconds: list[float] = []
     for number, name in enumerate(scenarios, start=1):
-        incident, elapsed = run_incident(name, mock=mock, number=number)
+        incident, elapsed = run_incident(name, mock=mock, number=number, save_artifacts=save_artifacts)
         incidents.append(incident)
         diagnose_seconds.append(elapsed)
 
     out_path = write_summary(incidents, diagnose_seconds)
     console.print(f"[dim]Wrote summary to {out_path}[/dim]")
+    if save_artifacts is not None:
+        shutil.copy(out_path, save_artifacts / "summary.html")
 
 
 def main() -> None:

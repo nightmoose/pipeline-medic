@@ -70,15 +70,81 @@ def parse_patch_targets(patch_text: str) -> list[str]:
 
 
 def apply_patch(sandbox_root: Path, patch_text: str) -> None:
-    result = subprocess.run(
-        ["git", "apply", "-p1"],
-        cwd=sandbox_root,
-        input=patch_text,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"patch failed to apply:\n{result.stdout}\n{result.stderr}")
+    """Apply a unified diff. Paths may be repo-relative or dbt-project-relative
+    (models/...), since real model output uses either form."""
+    errors = []
+    for extra in ([], ["--directory=dbt_project"]):
+        result = subprocess.run(
+            ["git", "apply", "-p1", "--recount", *extra],
+            cwd=sandbox_root,
+            input=patch_text,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            return
+        errors.append(result.stderr)
+    try:
+        _fuzzy_apply(sandbox_root, patch_text)
+        return
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"fuzzy apply: {exc}")
+    raise RuntimeError("patch failed to apply:\n" + "\n".join(errors))
+
+
+def _fuzzy_apply(sandbox_root: Path, patch_text: str) -> None:
+    """Fallback for LLM diffs with wrong hunk headers/counts: locate each hunk's
+    old block (context + removed lines) by content and replace it."""
+    path = None
+    hunks: list[tuple[Path, list[str], list[str]]] = []
+    old: list[str] = []
+    new: list[str] = []
+
+    def flush() -> None:
+        if path is not None and (old or new):
+            hunks.append((path, old[:], new[:]))
+        old.clear()
+        new.clear()
+
+    for line in patch_text.splitlines():
+        if line.startswith("+++ "):
+            flush()
+            rel = line[4:].split("\t")[0].strip()
+            rel = rel[2:] if rel.startswith("b/") else rel
+            cand = [sandbox_root / rel, sandbox_root / "dbt_project" / rel]
+            path = next((c for c in cand if c.exists()), None)
+            if path is None:
+                raise FileNotFoundError(rel)
+        elif line.startswith(("--- ", "diff ", "index ")):
+            continue
+        elif line.startswith("@@"):
+            flush()
+        elif line.startswith("-"):
+            old.append(line[1:])
+        elif line.startswith("+"):
+            new.append(line[1:])
+        elif path is not None:
+            ctx = line[1:] if line.startswith(" ") else line
+            old.append(ctx)
+            new.append(ctx)
+    flush()
+    if not hunks:
+        raise ValueError("no hunks")
+    for target, old_lines, new_lines in hunks:
+        lines = target.read_text().splitlines()
+        norm = [l.rstrip() for l in lines]
+        want = [l.rstrip() for l in old_lines]
+        while want and not want[-1]:
+            want.pop()
+            if new_lines and not new_lines[-1].strip():
+                new_lines.pop()
+        for i in range(len(norm) - len(want) + 1):
+            if norm[i : i + len(want)] == want:
+                lines[i : i + len(want)] = new_lines
+                break
+        else:
+            raise ValueError(f"hunk context not found in {target.name}")
+        target.write_text("\n".join(lines) + "\n")
 
 
 def verify_scenario(

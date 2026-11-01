@@ -1,0 +1,12 @@
+{
+  "root_cause": "Upstream customers contains 2 rows with NULL email that propagate unchanged through 1:1 stg_customers SELECT, violating not_null test; source data-quality issue, not model logic bug",
+  "evidence": [
+    "not_null test on stg_customers.email failed with 2 results",
+    "null_rate 0.25 on row_count 8 = 2 null emails matches test",
+    "stg_customers SQL is 1:1 SELECT from ref('customers') with no JOIN or transform that creates nulls",
+    "customers.email is nullable VARCHAR"
+  ],
+  "confidence": 0.9,
+  "patch": "",
+  "action": "suggest"
+}

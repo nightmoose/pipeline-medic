@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pipeline Medic — Incident Summary</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: #121b2e;
+    --border: #22304a;
+    --text: #e6edf7;
+    --muted: #8b9bb4;
+    --blue: #4da3ff;
+    --green: #35d08f;
+    --amber: #e0a64c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  h1 { color: var(--blue); margin: 0 0 4px; font-size: 28px; }
+  .subtitle { color: var(--muted); margin: 0 0 28px; }
+  .kpis { display: flex; gap: 16px; margin-bottom: 28px; }
+  .kpi {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 24px;
+    min-width: 140px;
+  }
+  .kpi .value { font-size: 28px; font-weight: 700; }
+  .kpi .label { color: var(--muted); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+  }
+  .pill.verified { background: rgba(53, 208, 143, 0.15); color: var(--green); }
+  .pill.suggested { background: rgba(224, 166, 76, 0.15); color: var(--amber); }
+  .pill.failed { background: rgba(224, 76, 76, 0.15); color: #e04c4c; }
+</style>
+</head>
+<body>
+  <h1>Pipeline Medic — Incident Summary</h1>
+  <p class="subtitle">Seeded demo run · 4 incidents · Muse Spark via Meta Model API</p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="value">4</div><div class="label">diagnosed</div></div>
+    <div class="kpi"><div class="value">3</div><div class="label">verified in sandbox</div></div>
+    <div class="kpi"><div class="value">3</div><div class="label">PRs proposed</div></div>
+    <div class="kpi"><div class="value">11.2s</div><div class="label">median diagnose</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>#</th><th>Job</th><th>Failure</th><th>Root cause</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      
+      <tr>
+        <td>1</td>
+        <td>stg_orders</td>
+        <td>Runtime Error in model stg_orders (models/staging/stg_orders.sql)</td>
+        <td>Upstream `orders` column renamed from `customer_id` to `cust_id` but `stg_orders` still selects `customer_id`, causing binder/compilation error.</td>
+        <td><span class="pill verified">pipeline-medic/upstream_rename · verified</span></td>
+      </tr>
+      
+      <tr>
+        <td>2</td>
+        <td>fct_orders</td>
+        <td>Compilation Error in model fct_orders (models/marts/fct_orders.sql)</td>
+        <td>stg_orders.amount is loaded as VARCHAR currency string (e.g. '120 USD') and fct_orders passes it through unmodified, violating the enforced contract requiring amount INTEGER.</td>
+        <td><span class="pill verified">pipeline-medic/schema_drift · verified</span></td>
+      </tr>
+      
+      <tr>
+        <td>3</td>
+        <td>order_customer_detail</td>
+        <td>Got 2 results, configured to fail if != 0</td>
+        <td>Left join fanout: stg_customers has duplicate rows per customer_id, multiplying orders for those customers in order_customer_detail and violating unique order_id.</td>
+        <td><span class="pill verified">pipeline-medic/bad_join_fanout · verified</span></td>
+      </tr>
+      
+      <tr>
+        <td>4</td>
+        <td>stg_customers</td>
+        <td>Got 2 results, configured to fail if != 0</td>
+        <td>Upstream customers contains 2 rows with NULL email that propagate unchanged through 1:1 stg_customers SELECT, violating not_null test; source data-quality issue, not model logic bug</td>
+        <td><span class="pill suggested">suggested · needs owner</span></td>
+      </tr>
+      
+    </tbody>
+  </table>
+</body>
+</html>
