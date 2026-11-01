@@ -1,0 +1,6 @@
+patched models: fct_orders
+dbt compile: OK
+dbt build: OK
+fct_orders row count: 10 (baseline 10, tolerance 2%)
+fct_orders max null rate: 0.00% (threshold 1%)
+airflow dag re-run: OK

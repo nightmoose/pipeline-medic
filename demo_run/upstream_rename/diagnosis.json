@@ -1,0 +1,12 @@
+{
+  "root_cause": "Upstream `orders` column renamed from `customer_id` to `cust_id` but `stg_orders` still selects `customer_id`, causing binder/compilation error.",
+  "evidence": [
+    "Binder Error: customer_id not found in FROM clause",
+    "Candidate bindings are cust_id, order_id, order_date, amount",
+    "Upstream orders has cust_id not customer_id",
+    "stg_orders selects customer_id from ref('orders')"
+  ],
+  "confidence": 0.98,
+  "patch": "--- a/models/staging/stg_orders.sql\n+++ b/models/staging/stg_orders.sql\n@@ -1,7 +1,7 @@\n select\n     order_id,\n-    customer_id,\n+    cust_id as customer_id,\n     cast(order_date as date) as order_date,\n     amount,\n     status\n from {{ ref('orders') }}\n",
+  "action": "fix"
+}

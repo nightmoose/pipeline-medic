@@ -1,0 +1,6 @@
+patched models: stg_orders
+dbt compile: OK
+dbt build: OK
+stg_orders row count: 10 (baseline 10, tolerance 2%)
+stg_orders max null rate: 0.00% (threshold 1%)
+airflow dag re-run: OK

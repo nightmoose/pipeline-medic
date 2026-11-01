@@ -1,0 +1,40 @@
+╭─ FAILED ─────────────────────────────────────────────────────────────────────╮
+│ fct_orders  (Airflow task dbt_build_marts · dbt node                         │
+│ model.pipeline_medic_dbt.fct_orders)                                         │
+│ Compilation Error in model fct_orders (models/marts/fct_orders.sql)          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ DIAGNOSIS ──────────────────────────────────────────────────────────────────╮
+│ model: muse-spark · Meta Model API · 10.8s                                   │
+│ Root cause : stg_orders.amount is loaded as VARCHAR currency string (e.g.    │
+│ '120 USD') and fct_orders passes it through unmodified, violating the        │
+│ enforced contract requiring amount INTEGER.                                  │
+│ Evidence   : contract expects amount INTEGER but definition provides         │
+│ VARCHAR; stg_orders.amount is VARCHAR with values like '120 USD'; fct_orders │
+│ selects amount directly with no cast/conversion                              │
+│ Confidence : 0.95                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ PROPOSED FIX ───────────────────────────────────────────────────────────────╮
+│ --- a/models/marts/fct_orders.sql                                            │
+│ +++ b/models/marts/fct_orders.sql                                            │
+│ @@ -6,7 +6,7 @@                                                              │
+│  select                                                                      │
+│      order_id,                                                               │
+│      customer_id,                                                            │
+│      order_date,                                                             │
+│ -    amount,                                                                 │
+│ +    CAST(SPLIT_PART(amount, ' ', 1) AS INTEGER) AS amount,                  │
+│      status                                                                  │
+│  from {{ ref('stg_orders') }}                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ SANDBOX VERIFY ─────────────────────────────────────────────────────────────╮
+│ ✓ dbt compile                                                                │
+│ ✓ full dbt build (sandbox duckdb)                                            │
+│ ✓ row/null bounds within tolerance                                           │
+│ ✓ contract check (dbt build)                                                 │
+│ ✓ Airflow DAG re-run                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ PULL REQUEST ───────────────────────────────────────────────────────────────╮
+│ dry-run branch pipeline-medic/schema_drift · verified                        │
+│ body: out/pr/schema_drift.md             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

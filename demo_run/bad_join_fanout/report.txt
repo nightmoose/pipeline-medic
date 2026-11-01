@@ -1,0 +1,55 @@
+╭─ FAILED ─────────────────────────────────────────────────────────────────────╮
+│ order_customer_detail  (Airflow task dbt_build_marts · dbt node              │
+│ test.pipeline_medic_dbt.unique_order_customer_detail_order_id.00684622d9)    │
+│ Got 2 results, configured to fail if != 0                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ DIAGNOSIS ──────────────────────────────────────────────────────────────────╮
+│ model: muse-spark · Meta Model API · 29.5s                                   │
+│ Root cause : Left join fanout: stg_customers has duplicate rows per          │
+│ customer_id, multiplying orders for those customers in order_customer_detail │
+│ and violating unique order_id.                                               │
+│ Evidence   : mart grain is one row per order_id from fct_orders left join    │
+│ stg_customers; unique test on order_id failed with 2 duplicate groups;       │
+│ row_count 12 with duplicate_rows 2 indicates row multiplication; join key is │
+│ customer_id, fanout occurs if stg_customers not unique on customer_id;       │
+│ fct_orders sample shows unique order_id 5001,5002,5003                       │
+│ Confidence : 0.78                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ PROPOSED FIX ───────────────────────────────────────────────────────────────╮
+│ --- a/models/marts/order_customer_detail.sql                                 │
+│ +++ b/models/marts/order_customer_detail.sql                                 │
+│ @@ -1,10 +1,19 @@                                                            │
+│ +with stg_customers_deduped as (                                             │
+│ +    select * from (                                                         │
+│ +        select c.*,                                                         │
+│ +               row_number() over (partition by customer_id order by         │
+│ signup_date desc) as _rn                                                     │
+│ +        from {{ ref('stg_customers') }} c                                   │
+│ +    ) where _rn = 1                                                         │
+│ +)                                                                           │
+│  select                                                                      │
+│      o.order_id,                                                             │
+│      o.customer_id,                                                          │
+│      o.order_date,                                                           │
+│      o.amount,                                                               │
+│      o.status,                                                               │
+│      c.email,                                                                │
+│      c.full_name,                                                            │
+│      c.region                                                                │
+│  from {{ ref('fct_orders') }} o                                              │
+│ -left join {{ ref('stg_customers') }} c on c.customer_id = o.customer_id     │
+│ +left join stg_customers_deduped c on c.customer_id = o.customer_id          │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ SANDBOX VERIFY ─────────────────────────────────────────────────────────────╮
+│ ✓ dbt compile                                                                │
+│ ✓ full dbt build (sandbox duckdb)                                            │
+│ ✓ row/null bounds within tolerance                                           │
+│ ✓ contract check (dbt build)                                                 │
+│ ✓ Airflow DAG re-run                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ PULL REQUEST ───────────────────────────────────────────────────────────────╮
+│ dry-run branch pipeline-medic/bad_join_fanout · verified                     │
+│ body: out/pr/bad_join_fanout.md          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

@@ -1,0 +1,27 @@
+╭─ FAILED ─────────────────────────────────────────────────────────────────────╮
+│ stg_customers  (Airflow task dbt_build_staging · dbt node                    │
+│ test.pipeline_medic_dbt.not_null_stg_customers_email.d7cf761533)             │
+│ Got 2 results, configured to fail if != 0                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ DIAGNOSIS ──────────────────────────────────────────────────────────────────╮
+│ model: muse-spark · Meta Model API · 10.8s                                   │
+│ Root cause : Upstream customers contains 2 rows with NULL email that         │
+│ propagate unchanged through 1:1 stg_customers SELECT, violating not_null     │
+│ test; source data-quality issue, not model logic bug                         │
+│ Evidence   : not_null test on stg_customers.email failed with 2 results;     │
+│ null_rate 0.25 on row_count 8 = 2 null emails matches test; stg_customers    │
+│ SQL is 1:1 SELECT from ref('customers') with no JOIN or transform that       │
+│ creates nulls; customers.email is nullable VARCHAR                           │
+│ Confidence : 0.90                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ PROPOSED FIX ───────────────────────────────────────────────────────────────╮
+│ No patch: this is a data-quality problem, not a code defect.                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ SANDBOX VERIFY ─────────────────────────────────────────────────────────────╮
+│ ✓ no patch to verify — flagged as an upstream data issue                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ PULL REQUEST ───────────────────────────────────────────────────────────────╮
+│ suggested · needs owner                                                      │
+│ body: out/pr/null_spike.md               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

@@ -1,0 +1,6 @@
+patched models: order_customer_detail
+dbt compile: OK
+dbt build: OK
+order_customer_detail row count: 10 (baseline 10, tolerance 2%)
+order_customer_detail max null rate: 0.00% (threshold 1%)
+airflow dag re-run: OK

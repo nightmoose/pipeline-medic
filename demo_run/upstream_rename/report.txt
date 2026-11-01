@@ -1,0 +1,41 @@
+╭─ FAILED ─────────────────────────────────────────────────────────────────────╮
+│ stg_orders  (Airflow task dbt_build_staging · dbt node                       │
+│ model.pipeline_medic_dbt.stg_orders)                                         │
+│ Runtime Error in model stg_orders (models/staging/stg_orders.sql)            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ DIAGNOSIS ──────────────────────────────────────────────────────────────────╮
+│ model: muse-spark · Meta Model API · 11.5s                                   │
+│ Root cause : Upstream `orders` column renamed from `customer_id` to          │
+│ `cust_id` but `stg_orders` still selects `customer_id`, causing              │
+│ binder/compilation error.                                                    │
+│ Evidence   : Binder Error: customer_id not found in FROM clause; Candidate   │
+│ bindings are cust_id, order_id, order_date, amount; Upstream orders has      │
+│ cust_id not customer_id; stg_orders selects customer_id from ref('orders')   │
+│ Confidence : 0.98                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ PROPOSED FIX ───────────────────────────────────────────────────────────────╮
+│ --- a/models/staging/stg_orders.sql                                          │
+│ +++ b/models/staging/stg_orders.sql                                          │
+│ @@ -1,7 +1,7 @@                                                              │
+│  select                                                                      │
+│      order_id,                                                               │
+│ -    customer_id,                                                            │
+│ +    cust_id as customer_id,                                                 │
+│      cast(order_date as date) as order_date,                                 │
+│      amount,                                                                 │
+│      status                                                                  │
+│  from {{ ref('orders') }}                                                    │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ SANDBOX VERIFY ─────────────────────────────────────────────────────────────╮
+│ ✓ dbt compile                                                                │
+│ ✓ full dbt build (sandbox duckdb)                                            │
+│ ✓ row/null bounds within tolerance                                           │
+│ ✓ contract check (dbt build)                                                 │
+│ ✓ Airflow DAG re-run                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ PULL REQUEST ───────────────────────────────────────────────────────────────╮
+│ dry-run branch pipeline-medic/upstream_rename · verified                     │
+│ body: out/pr/upstream_rename.md          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

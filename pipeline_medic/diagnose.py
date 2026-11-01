@@ -52,6 +52,7 @@ class DiagnoseResult:
     failed_task: FailedTask
     context: FailureContext
     diagnosis: llm.Diagnosis
+    prompt: str = ""
 
 
 def diagnose_scenario_full(scenario: str, *, mock: bool = True) -> DiagnoseResult:
@@ -74,9 +75,10 @@ def diagnose_scenario_full(scenario: str, *, mock: bool = True) -> DiagnoseResul
         mock_response = None
         if mock:
             mock_response = json.loads((FIXTURES_DIR / f"{scenario}.json").read_text())
-        diagnosis = llm.diagnose(prompt, mock_response=mock_response)
+        diagnosis = llm.diagnose(prompt, mock_response=mock_response, scenario=scenario)
         return DiagnoseResult(
-            scenario=scenario, failed_task=failed_task, context=context, diagnosis=diagnosis
+            scenario=scenario, failed_task=failed_task, context=context, diagnosis=diagnosis,
+            prompt=prompt,
         )
 
 

@@ -22,6 +22,7 @@ class FailureContext:
     compiled_sql: str | None
     raw_sql: str | None
     stats: dict[str, Any] = field(default_factory=dict)
+    upstream: dict[str, str] = field(default_factory=dict)
 
     def to_prompt(self) -> str:
         lines = [
@@ -37,6 +38,8 @@ class FailureContext:
             lines.append(f"Compiled SQL that failed:\n{self.compiled_sql}")
         if self.stats:
             lines.append(f"Observed stats: {json.dumps(self.stats)}")
+        for name, desc in self.upstream.items():
+            lines.append(f"Upstream relation {name} (columns and sample rows, as currently loaded):\n{desc}")
         return "\n\n".join(lines)
 
 
@@ -75,7 +78,36 @@ def collect(project_dir: Path, duckdb_path: Path | None = None) -> FailureContex
         compiled_sql=result.get("compiled_code"),
         raw_sql=model_node.get("raw_code") if model_node else None,
         stats=stats,
+        upstream=_upstream_schemas(duckdb_path, model_node, manifest),
     )
+
+
+def _upstream_schemas(duckdb_path: Path, model_node: dict | None, manifest: dict) -> dict[str, str]:
+    """Columns (name: type) plus 3 sample rows for each relation the failing model
+    reads, so the model sees what upstream actually looks like now."""
+    if model_node is None or not Path(duckdb_path).exists():
+        return {}
+    out: dict[str, str] = {}
+    try:
+        con = duckdb.connect(str(duckdb_path))
+    except duckdb.Error:
+        return {}
+    try:
+        for dep in model_node.get("depends_on", {}).get("nodes", []):
+            rel = (manifest["nodes"].get(dep) or {}).get("relation_name")
+            if not rel:
+                continue
+            try:
+                cols = con.execute(f"describe {rel}").fetchall()
+                rows = con.execute(f"select * from {rel} limit 3").fetchall()
+            except duckdb.Error:
+                continue
+            col_txt = ", ".join(f"{c[0]}: {c[1]}" for c in cols)
+            row_txt = "\n".join(str(r) for r in rows)
+            out[manifest["nodes"][dep]["name"]] = f"{col_txt}\n{row_txt}"
+    finally:
+        con.close()
+    return out
 
 
 def _find_failing_result(run_results: dict) -> dict | None:
